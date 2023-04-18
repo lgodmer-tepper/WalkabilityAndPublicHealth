@@ -21,8 +21,17 @@ knitr::opts_chunk$set(echo = TRUE)
 8. Click "Clone" 
 
 Now you have a local copy of the files from the "main" branch. 
-The "main" branch is the set if files that are the latest functional changes that have been reviewed and accepted by the team. 
+The "main" branch is the latest version of the files that have been reviewed and accepted by the team. 
 
 ## Making changes
 
-You should create a branch to make changes
+To make changes you will want to follow this process
+
+1. Create a branch
+2. Author your changes and test them
+3. Create a "pull request" to merge the changes to the "main" branch
+4. Request your teammates to review the changes.
+5. When all teammates have reviewed the changes you can merge them into the "main" branch. 
+
+### Creating a branch
+
