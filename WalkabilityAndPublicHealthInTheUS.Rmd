@@ -51,10 +51,11 @@ library(pROC)
 ## Download the datasets. 
 
 The data sets are large and take a while to download, so it is recommended to use these commands to download them locally once. 
+They are commented out here to avoid accidentally triggering a download. Uncomment these two lines and run them to download the raw data
 
 ```{r Download the data, echo=TRUE }
-download.file("https://edg.epa.gov/EPADataCommons/public/OA/EPA_SmartLocationDatabase_V3_Jan_2021_Final.csv", destfile="walkability.csv")
-download.file("https://data.cdc.gov/api/views/g4ie-h725/rows.csv?accessType=DOWNLOAD", destfile="diseaseindicators.csv")
+#download.file("https://edg.epa.gov/EPADataCommons/public/OA/EPA_SmartLocationDatabase_V3_Jan_2021_Final.csv", destfile="walkability.csv")
+#download.file("https://data.cdc.gov/api/views/g4ie-h725/rows.csv?accessType=DOWNLOAD", destfile="diseaseindicators.csv")
 ```
 
 

@@ -35,3 +35,61 @@ To make changes you will want to follow this process
 
 ### Creating a branch
 
+1. Make sure you are currently in the "main" branch (in the GitHub desktop client, at the top it shows "Current branch")
+2. Pull the latest changes from "main" by clicking "Fetch origin" (next to the current branch box)
+3. Go to the top menu "Branch" and then select "New Branch" 
+4. Give your branch a name and click Create
+
+### Author your changes
+
+1. Make any changes that you want to make to the files, such as the WalkabilityAndPublicHealthInTheUS.Rmd file which is the main code file for the project. You can use any editor such as RStudio to make and test your changes as usual. 
+2. Save your changes using your usual editor
+3. Go back to the GitHub Desktop client. You should see the files you have changed in the "Changes" pane. 
+4. Below the changes pane, there are two text boxes for you to enter a title and description of your change. 
+5. Below the text boxes you can click "Commit to <mybranch>" to commit the changes.
+
+You can commit as often as you like. It is a good practice to make smaller frequent commits so that you can easily go back in time if you want to undo some of the changes. 
+After you commit you will see that you have "no local changes" which just means that your changes are committed to your branch successfully. Note that the changes are not synced to the online repository, so if you delete your local folder where you have cloned the branch, all your changes will be lost. To prevent this you can click "Publish branch" which will push a copy of your branch to the server. 
+
+### Make a pull request to merge the changes to main
+
+When you are ready to share your changes with the team, you need to publish your branch using the "Publish branch" button. 
+Then you need to get your changes reviewed by the team by creating a pull request
+1. Visit https://github.com/lgodmer-tepper/WalkabilityAndPublicHealth 
+2. At the top you will see a yellow box that says something like "<mybranch> had recent pushes less than a minute ago" and a green button that says "Compare & pull request"
+3. Click the "Compare & pull request" button
+4. Send a message to the team asking them to review your changes. 
+5. When everyone agrees, click "Merge pull request" at the bottom, and then "Confirm merge" 
+6. It is also good practice after merging to delete the old branch by clicking "delete branch" on the next page.
+
+Now your changes are in the main branch and everyone can use them. 
+
+### IMPORTANT
+
+Now you should clean up your local environment by going back to the main branch and syncing your changes (and any changes that anyone else has made)
+
+1. In the GitHub desktop client change "Current branch" at the top back to "Main" 
+2. Click "Fetch origin" to get your local main up to date with the server. 
+3. Repeat the "creating a branch" step to create a new branch to add more changes. 
+
+## FAQ
+
+What if I forgot to create a new branch so I have some changes in the main branch?
+- No problem, just create a branch as usual. You will get a popup that says "You have changes on this branch. What would you like to do with them?" You should select "Bring my changes to <new branch>" so that your current changes will show up in the new branch. 
+
+What if someone else pushes changes to main while I have changes in progress? 
+- Commit all of your current changes to a branch in your GitHub client
+- Switch to the "main" branch in your GitHub client
+- use the "fetch origin" button to pull down other people's changes
+- switch back to the branch you committed your in progress changes to
+- Go to the "branch" menu and select "Merge into current branch" 
+- select the "main" branch
+- click "Create a merge commit" (if it is disabled it means there are no changes to merge)
+- The merge commit will pull the changes from main into your branch so you are up to date. 
+
+You can avoid having to merge by ensuring your master branch is up to date before you create a branch (using fetch origin), and by committing and pull requesting your changes frequently. 
+If you get stuck on a merge let Lou know and she can fix it for you. 
+
+
+
+
