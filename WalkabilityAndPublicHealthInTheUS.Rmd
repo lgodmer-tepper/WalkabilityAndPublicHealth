@@ -1,0 +1,61 @@
+---
+title: "Final Project: Walkability and Public Health in the US"
+author: "Lou Godmer, Kienan Battin, Divakar Mehta"
+date: "April 17, 2023"
+output:
+    pdf_document: default
+    toc: true
+    number_sections: true
+    toc_depth: 4
+---
+
+```{r setup, include=FALSE, warning=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+\tableofcontents 
+\newpage
+
+
+## Objective
+
+TODO write up the Objective
+
+## Load necessariy libararies
+
+```{r load libraries, message=FALSE, warning=FALSE}
+
+rm(list=ls())
+
+options(repos = list(CRAN="http://cran.rstudio.com/"))
+
+if (!require('NHANES')) install.packages('NHANES')
+library('openxlsx')
+
+if (!require('ggplot2')) install.packages('ggplot2')
+library('ggplot2')
+
+if (!require('dplyr')) install.packages('dplyr')
+library('dplyr')
+
+if (!require('GGally')) install.packages('GGally')
+library('GGally')
+
+if (!require('tableone')) install.packages('tableone')
+library(tableone) 
+
+if (!require('pROC')) install.packages('pROC')
+library(pROC)
+```
+
+
+## Download the datasets. 
+
+The data sets are large and take a while to download, so it is recommended to use these commands to download them locally once. 
+
+```{r Download the data, echo=TRUE }
+download.file("https://edg.epa.gov/EPADataCommons/public/OA/EPA_SmartLocationDatabase_V3_Jan_2021_Final.csv", destfile="walkability.csv")
+download.file("https://data.cdc.gov/api/views/g4ie-h725/rows.csv?accessType=DOWNLOAD", destfile="diseaseindicators.csv")
+```
+
+
+

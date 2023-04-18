@@ -1,0 +1,28 @@
+---
+title: "README"
+author: "lgodmer"
+date: '2023-04-18'
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## How to set up your workspace
+
+1. Create a GitHub account at https://github.com/signup
+2. Download and install GitHub desktop from https://desktop.github.com/
+3. Follow the prompts to sign in to the desktop client using the account you created in step 1
+4. Clone the repository by selecting "File -> Clone repository"
+5. Select the "URL" tab
+6. Paste the repository url in the search box "https://github.com/lgodmer-tepper/WalkabilityAndPublicHealth.git"
+7. Select the local path where you want to clone the repository to on your device.
+8. Click "Clone" 
+
+Now you have a local copy of the files from the "main" branch. 
+The "main" branch is the set if files that are the latest functional changes that have been reviewed and accepted by the team. 
+
+## Making changes
+
+You should create a branch to make changes
