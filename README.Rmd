@@ -82,6 +82,14 @@ What if someone else pushes changes to main while I have changes in progress?
 - Switch to the "main" branch in your GitHub client
 - use the "fetch origin" button to pull down other people's changes
 - switch back to the branch you committed your in progress changes to
-- 
+- Go to the "branch" menu and select "Merge into current branch" 
+- select the "main" branch
+- click "Create a merge commit" (if it is disabled it means there are no changes to merge)
+- The merge commit will pull the changes from main into your branch so you are up to date. 
+
+You can avoid having to merge by ensuring your master branch is up to date before you create a branch (using fetch origin), and by committing and pull requesting your changes frequently. 
+If you get stuck on a merge let Lou know and she can fix it for you. 
+
+
 
 
