@@ -21,7 +21,7 @@ knitr::opts_chunk$set(echo = TRUE)
 The objective is to determine the quantitative causal relationship between the "walkability" of a region and public health. 
 The original data comes from two sources:
 1. The [U.S. Chronic Disease Indicators](https://chronicdata.cdc.gov/Chronic-Disease-Indicators/U-S-Chronic-Disease-Indicators-CDI-/g4ie-h725) provides reported cases of a set of 124 indicators that are important to public health, and the geographic location of the case. 
-2. The [Walkability Index] (https://catalog.data.gov/dataset/walkability-index) quantifies every Census 2019 block group's relative "Walkability" as defined by the EPA based on characteristics such as easy walking access to public transit, jobs, stores and services. 
+2. The [Walkability Index](https://catalog.data.gov/dataset/walkability-index) quantifies every Census 2019 block group's relative "Walkability" as defined by the EPA based on characteristics such as easy walking access to public transit, jobs, stores and services. 
 Quantifying the causal effect of walkability and public health can help policy makers decide on community planning measures that may improve or degrade the walkability of the region, by helping them to understand the public health impact of such decisions.
 
 The appendix of this document describes the pre-processing methodology to combine the two data sets to enable the quantitative analysis. Because the pre-processing methodology can take an hour or more to execute, the pre-processed data is exported and the rest of the analysis is done based on the pre-processed data.
@@ -96,18 +96,14 @@ disease_with_walkability <- read.csv("disease_with_walkability.csv")
 As described in the objective section, the original data came from two sources. The disease indicators data contains location information in the form of latitude and longitude. The walkability data contains location information in the form of Federal census location codes (FIPS codes). The pre-processing technique below was used to convert the latitude and longitude to FIPS codes, and then perform a join operation utilizing the FIPS codes. The resulting data is the original disease indicators data, augmented with the walkability information for the location corresponding to the original latitude and longitude. 
 
 In other words, for every row in the disease indicators data set, the corresponding walkability information for the region was added to that row.
-All of the commands are commented out to prevent them from being executed on knit.
+All of the commands are commented out to prevent them from being executed on knit since they take a long time to run.
 
-#### Download the data
-
-The data sets are large and take a while to download, so it is recommended to use these commands to download them locally once. 
-They are commented out here to avoid accidentally triggering a download. Un-comment these two lines and run them to download the raw data
+#### Download the raw data
 
 ```{r Download the raw data, echo=TRUE }
 #download.file("https://edg.epa.gov/EPADataCommons/public/OA/EPA_SmartLocationDatabase_V3_Jan_2021_Final.csv", destfile="walkability.csv")
 #download.file("https://data.cdc.gov/api/views/g4ie-h725/rows.csv?accessType=DOWNLOAD", destfile="diseaseindicators.csv")
 ```
-
 
 #### Load the data into R
 
