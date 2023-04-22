@@ -18,7 +18,13 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ## Objective
 
-TODO write up the Objective
+The objective is to determine the quantitative causal relationship between the "walkability" of a region and public health. 
+The original data comes from two sources:
+1. The [U.S. Chronic Disease Indicators](https://chronicdata.cdc.gov/Chronic-Disease-Indicators/U-S-Chronic-Disease-Indicators-CDI-/g4ie-h725) provides reported cases of a set of 124 indicators that are important to public health, and the geographic location of the case. 
+2. The [Walkability Index] (https://catalog.data.gov/dataset/walkability-index) quantifies every Census 2019 block group's relative "Walkability" as defined by the EPA based on characteristics such as easy walking access to public transit, jobs, stores and services. 
+Quantifying the causal effect of walkability and public health can help policy makers decide on community planning measures that may improve or degrade the walkability of the region, by helping them to understand the public health impact of such decisions.
+
+The appendix of this document describes the pre-processing methodology to combine the two data sets to enable the quantitative analysis. Because the pre-processing methodology can take an hour or more to execute, the pre-processed data is exported and the rest of the analysis is done based on the pre-processed data.
 
 ## Load necessariy libararies
 
@@ -45,18 +51,139 @@ library(tableone)
 
 if (!require('pROC')) install.packages('pROC')
 library(pROC)
+
+if (!require('tidycensus')) install.packages('tidycensus')
+library(tidycensus)
+
+if (!require('tigris')) install.packages('tigris')
+library(tigris)
+
+if (!require('sf')) install.packages('sf')
+library(sf)
+
+if (!require('stringr')) install.packages('stringr')
+library(stringr)
+
+if (!require('dplyr')) install.packages('dplyr')
+library(dplyr)
+
 ```
 
 
-## Download the datasets. 
+## Load the data
 
-The data sets are large and take a while to download, so it is recommended to use these commands to download them locally once. 
-They are commented out here to avoid accidentally triggering a download. Uncomment these two lines and run them to download the raw data
+Download the data which has already undergone the pre-processing methodology described in the appendix.
+WARNING: this may take several minutes. To avoid unnecessary downloads, the commands are commented out. Un-comment and execute the commands to download the data.
 
 ```{r Download the data, echo=TRUE }
+#download.file("https://walkabilityandhealth.blob.core.windows.net/walkabilityandhealth/disease_with_walkability.zip", destfile="disease_with_walkability.zip")
+#unzip("disease_with_walkability.zip", "disease_with_walkability.csv")
+```
+```{r load the data}
+
+disease_with_walkability <- read.csv("disease_with_walkability.csv")
+
+```
+
+
+## TODO: Insert rest of paper here
+
+
+## Appendix
+
+### Original data pre-processing methodology
+
+As described in the objective section, the original data came from two sources. The disease indicators data contains location information in the form of latitude and longitude. The walkability data contains location information in the form of Federal census location codes (FIPS codes). The pre-processing technique below was used to convert the latitude and longitude to FIPS codes, and then perform a join operation utilizing the FIPS codes. The resulting data is the original disease indicators data, augmented with the walkability information for the location corresponding to the original latitude and longitude. 
+
+In other words, for every row in the disease indicators data set, the corresponding walkability information for the region was added to that row.
+All of the commands are commented out to prevent them from being executed on knit.
+
+#### Download the data
+
+The data sets are large and take a while to download, so it is recommended to use these commands to download them locally once. 
+They are commented out here to avoid accidentally triggering a download. Un-comment these two lines and run them to download the raw data
+
+```{r Download the raw data, echo=TRUE }
 #download.file("https://edg.epa.gov/EPADataCommons/public/OA/EPA_SmartLocationDatabase_V3_Jan_2021_Final.csv", destfile="walkability.csv")
 #download.file("https://data.cdc.gov/api/views/g4ie-h725/rows.csv?accessType=DOWNLOAD", destfile="diseaseindicators.csv")
 ```
 
 
+#### Load the data into R
 
+```{r load the raw data, echo=TRUE}
+#walkability <- read.csv("walkability.csv")
+## some of the disease data has no GeoLocation, which we cannot use for our analysis, so filter those out
+#disease <- filter(read.csv("diseaseindicators.csv"), GeoLocation != "")
+```
+
+#### Extract the latitude and longitude into separate columns
+
+```{r split disease long and lat to separate columns}
+
+## Extract the latitude and longitude values from the GeoLocation column using str_extract_all()
+#geo_df <- str_extract_all(disease$GeoLocation, "-?[0-9]+\\.[0-9]+")
+
+## Convert the extracted values to numeric and assign them to the corresponding latitude and longitude columns
+#disease$lat <- as.numeric(sapply(geo_df, function(x) x[2]))
+#disease$long <- as.numeric(sapply(geo_df, function(x) x[1]))
+
+```
+
+#### Fetch the geographic information required to map latitude and logitude to FIPS blocks
+
+The tigris library provides a function "block_groups" which returns geographic information about every FIPS block. This geographic information can be used to convert latitude and longitude to FIPS block. The following code downloads all of the block_groups for every block in the walkability data set.
+
+``` {r fetch geographies for blocks}
+
+## create data frame for block_groups data
+#allblockgroups <- data.frame(matrix(ncol=6, nrow=0))
+#colnames(allblockgroups) <- c('STATEFP', 'COUNTYFP', 'TRACTCE', 'BLKGRPCE', 'GEOID', 'geometry')
+
+## get block geography data for each state in the walkability dataset
+#stateCodes <- data.frame(unique(walkability$STATEFP))
+#for (i in 1:nrow(stateCodes)) {
+#  stateCode=stateCodes[[1]][i]
+#  counties = distinct(filter(walkability, STATEFP == stateCode), COUNTYFP)$COUNTYFP
+#  new_blocks <- block_groups(state=stateCodes[[1]][i], counties) %>%
+#    select(STATEFP, COUNTYFP, TRACTCE, BLKGRPCE, GEOID, geometry)
+#  allblockgroups <- rbind(allblockgroups, new_blocks)
+#}
+
+```
+
+#### Use block geographies to convert longitude and latitude to FIPS blocks
+
+``` {r convert disease long and lat to geoid10 }
+
+#my_points <- data.frame(
+#  x = disease$lat,
+#  y = disease$long
+#) %>%
+#  st_as_sf(coords = c("y", "x"),
+#     crs = st_crs(allblockgroups))
+  
+#my_points_blocks <- st_join(my_points, allblockgroups)
+#disease$STATEFP = as.integer(my_points_blocks$STATEFP)
+#disease$COUNTYFP = as.integer(my_points_blocks$COUNTYFP)
+#disease$TRACTCE = as.integer(my_points_blocks$TRACTCE)
+#disease$BLKGRPCE = as.integer(my_points_blocks$BLKGRPCE)
+#disease$GEOID = as.numeric(my_points_blocks$GEOID)
+
+```
+
+#### Join the disease indicators and walkability data sets based on FIPS blocks
+
+``` {r join the disease and walkability data }
+
+# Join the disease data with the walkability data
+#disease_with_walkability <- left_join(disease, walkability, 
+#                                  by = c("STATEFP", "COUNTYFP", "TRACTCE", "BLKGRPCE"))
+
+```
+
+#### Export the joined data to be used for further processing later.
+
+``` {r export the processed and merged data to a csv}
+#write.csv(disease_with_walkability, file = "disease_with_walkability.csv")
+```
