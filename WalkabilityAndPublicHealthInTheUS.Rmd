@@ -18,7 +18,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ## Objective
 
-The objective is to quantify the causal relationship that the "walkability" of a region has on public health. 
+The objective is to quantify the causal effect that the "walkability" of a region has on public health. 
 The original data comes from two sources:
 1. The [U.S. Chronic Disease Indicators](https://chronicdata.cdc.gov/Chronic-Disease-Indicators/U-S-Chronic-Disease-Indicators-CDI-/g4ie-h725) provides reported cases of a set of 124 indicators that are important to public health, and the geographic location of the case. 
 2. The [Walkability Index](https://catalog.data.gov/dataset/walkability-index) quantifies every Census 2019 block group's relative "Walkability" as defined by the EPA based on characteristics such as easy walking access to public transit, jobs, stores and services. 
