@@ -1,3 +1,8 @@
 
 walkability.csv
 diseaseindicators.csv
+.RData
+.Rhistory
+disease_with_walkability.csv
+disease_with_walkability_backup.csv
+disease_with_walkability.zip
