@@ -85,15 +85,31 @@ disease_with_walkability <- read.csv("disease_with_walkability.csv")
 
 ```
 
+## Do some cleanup and data shaping
+
+```{r convert treatment variable to binary}
+disease_with_walkability = filter(disease_with_walkability, !is.na(NatWalkInd))
+nwi25 <- 5.83 # the bottom 25 percent - least walkable blocks in the US have index less than 5.83
+nwi75 <- 13.17 # the top 25 percent- most walkable blocks in the US have index greater than 13.17
+# analysis will only use the disease data from the least walkable and most walkable blocks
+disease_with_walkability = filter(disease_with_walkability, NatWalkInd < nwi25 | NatWalkInd > nwi75)
+disease_with_walkability$Walkable <- ifelse(disease_with_walkability$NatWalkInd >= nwi75, 0, 1)
+```
+
+```{r extract stratification data}
+disease_with_walkability$Gender = ifelse(disease_with_walkability$StratificationCategory1 == "Gender", disease_with_walkability$Stratification1, NA)
+disease_with_walkability$Race = ifelse(disease_with_walkability$StratificationCategory1 == "Race/Ethnicity", disease_with_walkability$Stratification1, NA)
+```
+
 ## Get familiar with the data
 
 ### Descriptions of the fields in the dataset
 
 The table below describes the fields that are used in this analysis
 
-| Data Set | Field Name | Field Description | Usage In This Analysis | 
+| Source Data Set | Field Name | Field Description | Usage In This Analysis | 
 | -------- | -------- | -------- | -------- |
-| Walkability | NatWalkInd | Walkability Index | Treatment Variable |
+| Walkability | Walkable | Binary variable, 1 if the block is walkable, 0 otherwise | Treatment Variable |
 | Disease Indicators | LocationAbbr | US State or Territory Abbreviation |  |
 | Disease Indicators | LocationDesc | US State or Territory name |  |
 | Disease Indicators | DataSource | Origin of the disease indicator data |  |
@@ -102,8 +118,8 @@ The table below describes the fields that are used in this analysis
 | Disease Indicators | DataValueUnit | Unit of measurement for the response to "Question", i.e. "gallons" |  |
 | Disease Indicators | DataValueType | Type of measurement for the response to "Question", i.e. "mean" |  |
 | Disease Indicators | DataValueAlt | Numeric value of the response to "Question" | Dependent variable value |
-| Disease Indicators | StratificationCatgory1 | Category of demographic characteristic of the population being measured, i.e. Gender | Independent var (possible confounder) |
-| Disease Indicators | Stratification1 | Value of demographic characteristic of the population being measured, i.e. Female | Independent var (possible confounder) |
+| Disease Indicators | Gender | Gender of the subject of the disease indicator data | Independent var (possible confounder) |
+| Disease Indicators | Race | Race/Ethnicity of the subject of the disease indicator data | Independent var (possible confounder) |
 | Disease Indicators | GeoLocation | Longitude and latitude of the location where the data was collected |  |
 | Disease Indicators | STATEFP | FIPS state code of the state of GeoLocation |  |
 | Disease Indicators | COUNTYFP | FIPS county code of the county of GeoLocation |  |
@@ -192,8 +208,6 @@ The table below describes the fields that are used in this analysis
 ```{r Look at the structure of the data.frame}
 str(disease_with_walkability)
 ```
-
-The "Question" and "Response" fields contain data about an individuals response to various questions about disease indicators such as whether they have been hospitalized for asthma. 
 
 ## TODO: Insert rest of paper here
 
