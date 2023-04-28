@@ -85,11 +85,131 @@ disease_with_walkability <- read.csv("disease_with_walkability.csv")
 
 ```
 
+## Do some cleanup and data shaping
+
+```{r convert treatment variable to binary}
+disease_with_walkability = filter(disease_with_walkability, !is.na(NatWalkInd))
+nwi25 <- 5.83 # the bottom 25 percent - least walkable blocks in the US have index less than 5.83
+nwi75 <- 13.17 # the top 25 percent- most walkable blocks in the US have index greater than 13.17
+# analysis will only use the disease data from the least walkable and most walkable blocks
+disease_with_walkability = filter(disease_with_walkability, NatWalkInd < nwi25 | NatWalkInd > nwi75)
+disease_with_walkability$Walkable <- ifelse(disease_with_walkability$NatWalkInd >= nwi75, 0, 1)
+```
+
+```{r extract stratification data}
+disease_with_walkability$Gender = ifelse(disease_with_walkability$StratificationCategory1 == "Gender", disease_with_walkability$Stratification1, NA)
+disease_with_walkability$Race = ifelse(disease_with_walkability$StratificationCategory1 == "Race/Ethnicity", disease_with_walkability$Stratification1, NA)
+```
+
+## Get familiar with the data
+
+### Descriptions of the fields in the dataset
+
+The table below describes the fields that are used in this analysis
+
+| Source Data Set | Field Name | Field Description | Usage In This Analysis | 
+| -------- | -------- | -------- | -------- |
+| Walkability | Walkable | Binary variable, 1 if the block is walkable, 0 otherwise | Treatment Variable |
+| Disease Indicators | LocationAbbr | US State or Territory Abbreviation |  |
+| Disease Indicators | LocationDesc | US State or Territory name |  |
+| Disease Indicators | DataSource | Origin of the disease indicator data |  |
+| Disease Indicators | Topic | Category of the disease information, i.e. "Asthma" |  |
+| Disease Indicators | Question | Brief description of the condition being measured | Dependent variable category |
+| Disease Indicators | DataValueUnit | Unit of measurement for the response to "Question", i.e. "gallons" |  |
+| Disease Indicators | DataValueType | Type of measurement for the response to "Question", i.e. "mean" |  |
+| Disease Indicators | DataValueAlt | Numeric value of the response to "Question" | Dependent variable value |
+| Disease Indicators | Gender | Gender of the subject of the disease indicator data | Independent var (possible confounder) |
+| Disease Indicators | Race | Race/Ethnicity of the subject of the disease indicator data | Independent var (possible confounder) |
+| Disease Indicators | GeoLocation | Longitude and latitude of the location where the data was collected |  |
+| Disease Indicators | STATEFP | FIPS state code of the state of GeoLocation |  |
+| Disease Indicators | COUNTYFP | FIPS county code of the county of GeoLocation |  |
+| Disease Indicators | TRACTCE | FIPS tract code of the tract of GeoLocation |  |
+| Disease Indicators | BLKGRPCE | FIPS block code of the block group of GeoLocation |  |
+| Disease Indicators | GEOID | Full GEOID (state, county, tract, block group) of GeoLocation |  |
+| Walkability | CSA | "Combined Statistical Area" - grouping of adjacent metropolitan statistical areas that share social and economic ties | |
+| Walkability | CSA_NAME | Friendly name of the CSA | |
+| Walkability | CBSA | "Core Based Statistical Area" - functional region based around an urban center along with adjacent areas that are socioeconomically tied to the urban center by commuting | |
+| Walkability | CBSA_NAME | Friendly name of the CBSA | |
+| Walkability | CBSA_POP | Estimated population of the CBSA | |
+| Walkability | CBSA_EMP | Total number of employees in the CBSA | |
+| Walkability | CBSA_WRK | Total number of workers in the CBSA | |
+| Walkability | AC_Total | Total area of land in square meters within the block group | |
+| Walkability | AC_Water | Total area of land in square meters covered by water within the block group | |
+| Walkability | AC_Land | Total area of land in square meters not covered by water within the block group | |
+| Walkability | AC_Unpr | Total are of land in square meters classified as unproductive or unused within the block group | |
+| Walkability | TotPop | Total population within the block group | |
+| Walkability | CountHU | Count of housing units in the block group | |
+| Walkability | HH | Count of occupied housing units in the block group | |
+| Walkability | P_WrkAge | Percentage of the population that is of working age (16 or older) | |
+| Walkability | AutoOwn0 | Households with zero automobiles | |
+| Walkability | Pct_AO0 | Percentage of households with zero automobiles | |
+| Walkability | AutoOwn1 | Households with one automobiles | |
+| Walkability | Pct_AO1 | Percentage of households with one automobiles | |
+| Walkability | AutoOwn2p | Households with two or more automobiles | |
+| Walkability | Pct_AO2p | Percentage of households with two or more automobiles| |
+| Walkability | Workers | Population of workers (16 or older) in the block group | |
+| Walkability | R_LowWageWk | Number of workers earning $1250/month or less (home location) | |
+| Walkability | R_MedWageWk | Number of workers earning more than $1250/month and less than $3333/month (home location) | |
+| Walkability | R_HiWageWk | Number of workers earning $3333/month or more (home location) | |
+| Walkability | R_PCTLOWWAGE | Low wage workers as a percent of all workers in CBG (home location) | |
+| Walkability | TotEmp | Total employment | |
+| Walkability | E8_Ret | Retail jobs within a 8-tier employment classification scheme | |
+| Walkability | E8_off | Office jobs within a 8-tier employment classification scheme | |
+| Walkability | E8_Ind | Industrial jobs within a 8-tier employment classification scheme | |
+| Walkability | E8_Svc | Service jobs within a 8-tier employment classification scheme | |
+| Walkability | E8_Ent | Entertainment jobs within a 8-tier employment classification scheme | |
+| Walkability | E8_Ed | Education  jobs within a 8-tier employment classification scheme | |
+| Walkability | E8_Hlth Healthcare jobs within a 8-tier employment classification scheme | | |
+| Walkability | E8_Pub | Public administration jobs within a 8-tier employment classification scheme | |
+| Walkability | E_LowWageWk | Number of workers earning $1250/month or less (work location) | |
+| Walkability | E_MedWageWk | Number of workers earning more than $1250/month and less than $3333/month (work location) | |
+| Walkability | E_HiWageWk | Number of workers earning $3333/month or more (work location) | |
+| Walkability | E_PctLowWage |  Low wage workers as a percent of all workers in CBG (work location) | |
+| Walkability | D1A | Gross residential density (HU/acre) on unprotected land | |
+| Walkability | D1B | Gross population density (people/acre) on unprocted land | |
+| Walkability | D1C | Gross employment density (jobs/acre) on unprotected land | |
+| Walkability | D1C8_RET | Gross retail (8-tier) employment density (jobs/acre) on unprotected land | |
+| Walkability | D1C8_OFF | Gross office (8-tier) employment density (jobs/acre) on unprotected land | |
+| Walkability | D1C8_IND | Gross industrial (8-tier) employment density (jobs/acre) on unprotected land | |
+| Walkability | D1C8_SVC | Gross service (8-tier) employment density (jobs/acre) on unprotected land | |
+| Walkability | D1C8_ENT | Gross entertainment (8-tier) employment density (jobs/acre) on unprotected land | |
+| Walkability | D1C8_ED | Gross education (8-tier) employment density (jobs/acre) on unprotected land | |
+| Walkability | D1C8_HLTH | Gross healthcare (8-tier) employment density (jobs/acre) on unprotected land | |
+| Walkability | D1C8_PUB | Gross public administration (8-tier) employment density (jobs/acre) on unprotected land | |
+| Walkability | D1D | Gross activity density (HU + employment / acre) on unprotected land | |
+| Walkability | D2A_JPHH | Jobs per housing unit | |
+| Walkability | D2B_E8MIX | 8-tier employment entropy | |
+| Walkability | D2B_E8MIXA | 8-tier employment entropy, denominator set to the static 8 employment types in the CBG | |
+| Walkability | D2C_TRPMX2 | Employment and household entropy (excluding industrial jobs), based on trip production and attraction | |
+| Walkability | D2C_TRIPEQ | Trip production and trip attractions equilibrium index (closer to 1 = more balance) | |
+| Walkability | D2R_JOBPOP | Deviation of CBG jobs/population ratio from regional average jobs/pop ratio | |
+| Walkability | D2R_WRKEMP | Household workers per job | |
+| Walkability | D2A_WORKEMP | Deviation of CBG ratio of household workers/job from regional average ratio of household workers/ob | |
+| Walkability | D2C_WREMLX | Household worker per job equilibrium index (closer to one = more balanced) | |
+| Walkability | D4A | Distance from population weighted centroid to nearest transit stop, meters | |
+| Walkability | D4B025 | Proportion of CBG employment within 1/4 mile of fixed guideway transit stop | |
+| Walkability | D4B050 | Proportion of CBG employment within 1/2 mile of fixed guideway transit stop | |
+| Walkability | D4C | Transit service frequency. (Afternoon peak period transit departure within 0.25 miles) | |
+| Walkability | D4D | Peak pm transit departure within 0.25 miles of CBG, per square mile | |
+| Walkability | D5AR | Jobs within a 45 minute drive (weighted) | |
+| Walkability | D5AE | Working-age population within 45 min. drive (weighted) | |
+| Walkability | D5BR | Jobs within 45 min. transit commute (weighted) | |
+| Walkability | D5BE | Working-age population within 45 min. transit commute (weighted) | |
+| Walkability | D5CR | Job accessibility (D5ar) as proportion of total regional job accessibility | |
+| Walkability | D5CRI | Regional centrality index (auto) - D5cr divided by max D5cr in metro region (CBSA) | |
+| Walkability | D5CE | Accessibility to working-age populatin (D5ae) as proportion of total regional accessibility | |
+| Walkability | D5CEI | Regional centrality index (auto) - D5ce divided by max D5ce in metro region (CBSA) | |
+| Walkability | D5DR | Job accessibility by transit (D5br) as proportion of total regional job accessibility by transit | |
+| Walkability | D5DRI | Regional centrality index (transit) - D5dr divided by max D5dr in metro region (CBSA) | |
+| Walkability | D5DE | Accessibility to working-age populatin by transit (D5be) as proportion of total regional accessibility | |
+| Walkability | D5DEI | Regional centrality index (transit) - D5de divided by max D5de in metro region (CBSA) | |
+
+
+```{r Look at the structure of the data.frame}
+str(disease_with_walkability)
+```
 
 ## TODO: Insert rest of paper here
-
-## BOOMER IS GITHUBBING!!!
-
 
 ## Appendix
 
