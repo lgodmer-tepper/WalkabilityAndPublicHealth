@@ -1,7 +1,7 @@
 ---
 title: "Final Project: Walkability and Public Health in the US"
 author: "Lou Godmer, Kienan Battin, Divakar Mehta"
-date: "April 17, 2023"
+date: "May 3, 2023"
 output:
     pdf_document: default
     toc: true
@@ -15,10 +15,9 @@ knitr::opts_chunk$set(echo = TRUE)
 \tableofcontents 
 \newpage
 
-
 ## Objective
 
-The objective is to quantify the causal effect that the "walkability" of a region has on the public health indicators: obesity and physical activity. 
+The objective is to quantify the causal effect that the "walkability" of a region has on one of the public health indicators: percentage of the population that is overweight. 
 The original data comes from two sources:
 1. The [U.S. Chronic Disease Indicators](https://chronicdata.cdc.gov/Chronic-Disease-Indicators/U-S-Chronic-Disease-Indicators-CDI-/g4ie-h725) provides reported cases of a set of 124 indicators that are important to public health, and the geographic location of the case. 
 2. The [Walkability Index](https://catalog.data.gov/dataset/walkability-index) quantifies every Census 2019 block group's relative "Walkability" as defined by the EPA based on characteristics such as easy walking access to public transit, jobs, stores and services. 
@@ -70,6 +69,12 @@ library(stringr)
 if (!require('dplyr')) install.packages('dplyr')
 library(dplyr)
 
+if (!require('png')) install.packages('png')
+library(png)
+
+if (!require('gridExtra')) install.packages('gridExtra')
+library(gridExtra)
+
 ```
 
 
@@ -96,7 +101,7 @@ The disease indicator data has a column for "Question" which contains the detail
 
 | Topic | Question | QuestionID | Intended Usage |
 | ---------- | -------------- | -------- | -------- | -------- |
-| Nutrition, Physical Activity and Weight Status | Overweight or obesity among adults aged >= 18 years | NPAW2_1 | Dependent Var |
+| Nutrition, Physical Activity and Weight Status | Overweight or obesity among adults aged >= 18 years | NPAW2_1 | Outcome Var |
 | Alcohol | Heavy drinking among adults aged >= 18 years | ALC5_1 | Independent Var |
 | Arthritis | Arthritis among adults aged >= 18 years | ART1_1 | Independent var |
 | Asthma | Current asthma prevalence among adults aged >= 18 years | AST1_1 | Independent var |
@@ -107,6 +112,17 @@ The disease indicator data has a column for "Question" which contains the detail
 | Tobacco | Current smoking among adults aged >= 18 years | TOB1_2 | Independent var |
 | Tobacco | Current smokeless tobacco use among adults aged >= 18 years | TOB2_2 | Independent var |
 | Chronic Kidney Disease | Prevalence of chronic kidney disease among adults aged >= 18 years | CKD3_0 | Independent var |
+
+The directed graph below shows a depiction of our assumptions about causality between these variables, plus some unobserved variables that may also confound our results. 
+As you can see, this is a complicated web of causal relationships. The overall assumption is that the waklability of a blockgroup increases the amount of regular exercise that people will get, which will reduce the prevalence of overweight and obsese conditions. We do not have any data about regular exercise, so that is an unobserved "chain" causal relationship, but that is OK since we have Walkable and Overweight. 
+Arthritis, Asthma, COPD, and Kidney Disease are possible colliders in our data set because these conditions can all be caused by overwight and obese conditions, and these can also be caused directly or indirectly by walkability. 
+There are also many possible confounders, for example regular dentist visits and overweight may be correlated because they are both caused by Walkable (assuming that walkable communities have easier access to dentists), however regular dentist visits does not have any causal relationship with overweight or obese conditions. 
+
+
+```{r load the png dag}
+knitr::include_graphics("DirectedGraph.png")
+
+```
 
 ```{r shape the dataaset according to the 12 applicable disease indicators}
 
@@ -152,7 +168,7 @@ disease_with_walkability_collapsed$Walkable <- ifelse(disease_with_walkability_c
 dww <- disease_with_walkability_collapsed
 ```
 
-## Understand the variables in the dataset
+## Understand the variables in the final shaped dataset
 
 The table below describes the variables that are used in this analysis, including the variables that contain the values of the questions we selected.
 The "Usage In This Analysis" column categorizes how these will be used in analysis. 
@@ -160,7 +176,7 @@ The "Usage In This Analysis" column categorizes how these will be used in analys
 | Variable Name | Variable Description | Usage In This Analysis | 
 | -------- | ------------------ | -------- |
 | Walkable | Binary variable, 1 if the block is walkable, 0 otherwise | Treatment Variable |
-| Overweight | Percentage of the population overweight or obese | Dependent Variable |
+| Overweight | Percentage of the population overweight or obese | Outcome Variable |
 | R_PCTLOWWAGE | Percentage of the population that makes less than $1250/month | Independent Variable |
 | HighSchool | Percentage of the population ages 18-24 who have completed high school | Independent Variable |
 | Alcohol | Percentage of the population with high alcohol use | Independent Variable |
@@ -172,6 +188,8 @@ The "Usage In This Analysis" column categorizes how these will be used in analys
 | COPD | Percentage of the population with Chronic Obstructive Pulmonary Disease | Independent Variable |
 | NoInsurance | Percentage of the population without health care coverage | Independent Variable |
 | Dentist | Percentage of the population with dentist visits | Independent Variable |
+
+
 
 ## Get familiar with the data using summary statistics
 
@@ -207,7 +225,7 @@ lm_fit <- lm(Overweight ~ Walkable, dww)
 summary(lm_fit)
 
 ```
-Adding in our other variables reduces the coefficient of Walkable by about 10x and it is still not statistically significant. Arthritis, Asthma, KidneyDisease, Vapeing and Smoking are much better predictors of the precentage of the population that is overweight. This model has a much higher adjusted R-squared, so it is much better at predicting the variance in Overweight
+Adding in our other variables reduces the coefficient of Walkable by about 10x and it is still not statistically significant. Arthritis, Asthma, KidneyDisease, Vapeing and Smoking are much better predictors of the precentage of the population that is overweight. This model has a much higher adjusted R-squared, so it is much better at predicting the variance in Overweight. This gives us a "backdoor" estimate of the average treatment effect of Walkable on Overweight of 0.07.
 
 ```{r linear regression}
 
@@ -251,6 +269,101 @@ resid_fitted
 ### Conclusions from the predictive model
 
 Overweight can be predicted reasonably well from the variables in our dataset. Interestingly Walkable is not statistically significant in the model. We will do some further analysis in the next sections to see if confounders may be impacting this model and there may actually be hidden causality between Walkable and Overweight. 
+
+## Investigate the balance of covariates
+
+The data set is not from a randomized control trial, and as such we expect the covariates are likely imbalanced. First let's use a tableone summary to quantify the imbalance.
+
+### Tableone summary
+
+The tableone summary shows us that the standardized mean difference is larger than we would like (>0.2) for R_PCTLOWWAGE, Alcohol, Asthma, KidneyDisease, Vapeing, Smoking, NoInsurance and Dentist. As such we can conclude that these may be confounding variables that we should be adjusting for. We'll take a closer look at each of these in histograms.
+
+```{r tableone}
+vars <- c("R_PCTLOWWAGE", "HighSchool", "Alcohol", "Arthritis", "Asthma", "KidneyDisease", "Vapeing", "Smoking", "COPD", "NoInsurance", "Dentist")
+tabUnmatched <- CreateTableOne(vars = vars, strata = "Walkable", data = dww, test = FALSE)
+print(tabUnmatched, smd = TRUE)
+```
+
+### Histograms for the variables with high SMD.
+
+``` {r histfunction}
+hist_compare <- function(dta, variable, bin_width, yscale) {
+  dta <- as.data.frame(dta)
+  dta$variable <- dta[, variable]
+  dta$Walkable <- as.factor(dta$Walkable)
+  ggplot() +
+    geom_histogram(data = filter(dta, Walkable==1 ), aes(x = variable, y = after_stat(density)),
+      binwidth = bin_width, fill="blue")+
+    geom_histogram(data = filter(dta, Walkable==0 ), aes(x = variable, y = - after_stat(density)),
+      binwidth = bin_width, fill = "red") +
+    labs(y="Walkable=0 Walkable=1") + ylim(-yscale, yscale) + coord_flip() + xlab(variable)
+}
+```
+
+#### R_PCTLOWWAGE
+
+The histogram shows that R_PCTLOWWAGE is imbalanced with respect to the treatment variable, walkable. The walkable blockgroups are more likely to have both higher low wage percentage and lower low wage percentage, where as the non-walkable groups have more middle range values for low wage percentage. 
+
+``` {r hist_R_PCTLOWWAGE_and_Walkable}
+hist_compare(dww, "R_PCTLOWWAGE", .05, 10)
+```
+
+
+#### Alcohol
+
+The percent of the population with high alcohol usage is also imbalanced, with walkable block groups having higher populations with high alcohol usage. 
+
+``` {r hist_R_PCTLOWWAGE_and_Walkable, message=FALSE, warning=FALSE}
+hist_compare(dww, "Alcohol", .2, 1)
+```
+
+#### Asthma
+
+Asthma is also imbalanced. Walkable block groups have lower percentages of population with asthma. 
+
+``` {r hist_R_PCTLOWWAGE_and_Walkable, message=FALSE, warning=FALSE}
+hist_compare(dww, "Asthma", .1, 1)
+```
+
+#### KidneyDisease
+
+KidneyDisease is also imbalanced with walkable block groups having generally higher levels of kidney disease.
+
+``` {r hist_R_PCTLOWWAGE_and_Walkable, message=FALSE, warning=FALSE}
+hist_compare(dww, "KidneyDisease", .05, 2.5)
+```
+
+#### Vapeing
+
+Vapeing is also imbalanced with walkable block groups having generally higher levels of vapeing disease.
+
+``` {r hist_R_PCTLOWWAGE_and_Walkable, message=FALSE, warning=FALSE}
+hist_compare(dww, "Vapeing", .1, 1)
+```
+
+#### Smoking
+
+Smoking is also imbalanced with walkable block groups having generally higher levels of smoking disease.
+
+``` {r hist_R_PCTLOWWAGE_and_Walkable, message=FALSE}
+hist_compare(dww, "Smoking", .3, .25)
+```
+
+#### NoInsurance
+
+NoInsurance is also imbalanced with walkable block groups having generally higher percentages of people without health insurance.
+
+``` {r hist_R_PCTLOWWAGE_and_Walkable, message=FALSE, warning=FALSE}
+hist_compare(dww, "NoInsurance", .5, .25)
+```
+
+#### Dentist
+
+Dentist is also imbalanced with walkable block groups having generally lower percentages of people who visit the dentist regularly.
+
+``` {r hist_R_PCTLOWWAGE_and_Walkable, message=FALSE, warning=FALSE}
+hist_compare(dww, "Dentist", .5, .25)
+```
 
 ## TODO: Insert rest of paper here
 
