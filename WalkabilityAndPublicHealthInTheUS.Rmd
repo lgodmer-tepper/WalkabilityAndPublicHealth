@@ -183,6 +183,24 @@ The first thing we will note is that what started as a very large data set with 
 ```{r Look at the structure of the data.frame}
 str(dww)
 ```
+Another observation from the summary statistics is that there are a lot of NA values for the disease indicators (such as Alcohol, Arthritis, Asthma, etc. ). This will also impact the confidence of any estimated causality conclusions drawn from this data. 
+
+```{r summary statistics}
+summary(dww)
+```
+Here we take a look at the correlation between the variables. The rendering in markdown is a bit small to see so you can also un-comment the "ggsave" command to export a larger rendering. Key observations:
+1. Walkable (the treatment variable) is correlated with higher levels of alcohol use, smoking, vapeing, and noinsurance. 
+2. Overweight (the dependent variable) is correlated with lower likeiyhood of high school graduation, lower physical activity, and dental visits, and higher levels of arthritis, COPD, smoking and vapeing.
+
+```{r pairs summary of the data, message=FALSE, warning=FALSE}
+dww_numeric = dww %>% select(-YearStart, -LocationAbbr, -LocationDesc, -STATEFP, -COUNTYFP, 
+       -TRACTCE, -BLKGRPCE, -GEOID)
+#pairs(dww_numeric)
+dww_ggpairs = GGally::ggpairs(dww_numeric)
+#ggsave("dww_ggpairs.png", plot=dww_ggpairs, width=20, height=20)
+dww_ggpairs
+```
+
 
 ## TODO: Insert rest of paper here
 
