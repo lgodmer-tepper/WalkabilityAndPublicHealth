@@ -97,7 +97,6 @@ The disease indicator data has a column for "Question" which contains the detail
 | Topic | Question | QuestionID | Intended Usage |
 | ---------- | -------------- | -------- | -------- | -------- |
 | Nutrition, Physical Activity and Weight Status | Overweight or obesity among adults aged >= 18 years | NPAW2_1 | Dependent Var |
-| Nutrition, Physical Activity and Weight Status | Meeting aerobic physical activity guidelines for substantial health benefits among adults aged >= 18 years | NPAW11_1 | Dependent var |
 | Alcohol | Heavy drinking among adults aged >= 18 years | ALC5_1 | Independent Var |
 | Arthritis | Arthritis among adults aged >= 18 years | ART1_1 | Independent var |
 | Asthma | Current asthma prevalence among adults aged >= 18 years | AST1_1 | Independent var |
@@ -114,7 +113,7 @@ The disease indicator data has a column for "Question" which contains the detail
 # filter down to just the 12 selected questions
 disease_with_walkability_filtered <- filter(disease_with_walkability, DataValueType == "Crude Prevalence" & 
   StratificationCategory1 == "Overall" & !is.na(NatWalkInd))
-filtered_qids <- c("NPAW2_1", "NPAW11_1", "ALC5_1", "ART1_1", "AST1_1", "COPD2_0", "ORH1_1", "OVC2_1", "OVC1_1", "TOB1_2", "TOB2_2", "CKD3_0")
+filtered_qids <- c("NPAW2_1", "ALC5_1", "ART1_1", "AST1_1", "COPD2_0", "ORH1_1", "OVC2_1", "OVC1_1", "TOB1_2", "TOB2_2", "CKD3_0")
 disease_with_walkability_filtered <- disease_with_walkability_filtered[disease_with_walkability_filtered$QuestionID %in% filtered_qids,]
 
 # reshape the data by grouping by all the unique properties per block group, and expanding
@@ -129,7 +128,6 @@ disease_with_walkability_collapsed <- disease_with_walkability_filtered %>%
 # rename the question columns to something easier to read
 disease_with_walkability_collapsed <- disease_with_walkability_collapsed %>% 
   rename("Overweight" = "NPAW2_1") %>%
-  rename("Active" = "NPAW11_1") %>%
   rename("Alcohol" = "ALC5_1") %>%
   rename("Arthritis" = "ART1_1") %>%
   rename("Asthma" = "AST1_1") %>%
@@ -163,7 +161,6 @@ The "Usage In This Analysis" column categorizes how these will be used in analys
 | -------- | ------------------ | -------- |
 | Walkable | Binary variable, 1 if the block is walkable, 0 otherwise | Treatment Variable |
 | Overweight | Percentage of the population overweight or obese | Dependent Variable |
-| Active | Percentage of the population that meets physical activity guidelines | Dependent Variable |
 | R_PCTLOWWAGE | Percentage of the population that makes less than $1250/month | Independent Variable |
 | HighSchool | Percentage of the population ages 18-24 who have completed high school | Independent Variable |
 | Alcohol | Percentage of the population with high alcohol use | Independent Variable |
@@ -190,7 +187,7 @@ summary(dww)
 ```
 Here we take a look at the correlation between the variables. The rendering in markdown is a bit small to see so you can also un-comment the "ggsave" command to export a larger rendering. Key observations:
 1. Walkable (the treatment variable) is correlated with higher levels of alcohol use, smoking, vapeing, and noinsurance. 
-2. Overweight (the dependent variable) is correlated with lower likeiyhood of high school graduation, lower physical activity, and dental visits, and higher levels of arthritis, COPD, smoking and vapeing.
+2. Overweight (the dependent variable) is correlated with lower likeiyhood of high school graduation, lower levels of regular dental visits, and higher levels of arthritis, COPD, smoking and vapeing.
 
 ```{r pairs summary of the data, message=FALSE, warning=FALSE}
 dww_numeric = dww %>% select(-YearStart, -LocationAbbr, -LocationDesc, -STATEFP, -COUNTYFP, 
@@ -200,7 +197,60 @@ dww_ggpairs = GGally::ggpairs(dww_numeric)
 #ggsave("dww_ggpairs.png", plot=dww_ggpairs, width=20, height=20)
 dww_ggpairs
 ```
+## Fit an appropriate forecasting model to predict Overweight
 
+Regressing Overweight on Walkable indicates that Walkable predicts about a 0.76% increase in the population that is Overweight. However the Walkable coefficient is not statistically significant and the Adjusted R-squared is very low, which indicates that a lot of variance in Overweight is not accurately predicted by this model. 
+
+```{r linear regression just walkable}
+
+lm_fit <- lm(Overweight ~ Walkable, dww)
+summary(lm_fit)
+
+```
+Adding in our other variables reduces the coefficient of Walkable by about 10x and it is still not statistically significant. Arthritis, Asthma, KidneyDisease, Vapeing and Smoking are much better predictors of the precentage of the population that is overweight. This model has a much higher adjusted R-squared, so it is much better at predicting the variance in Overweight
+
+```{r linear regression}
+
+lm_fit <- lm(Overweight ~ R_PCTLOWWAGE+HighSchool+Alcohol+Arthritis+Asthma+KidneyDisease+Vapeing+Smoking+COPD+NoInsurance+Dentist+Walkable, dww)
+summary(lm_fit)
+
+```
+
+### Diagnostic plots to judge the model's fit
+
+Let's look at some diagnostics to further understand how good the predictive model is. This will provide some clues and baseline when we move on to estimating causality in the next section. 
+
+#### Residuals Histogram 
+
+First consider the histogram plot of the residuals.  This is to help judge if the errors are normally distributed.
+The residuals are not very normal looking here, likely due to issues mentioned before - small sample size and a lot of NA values.  
+```{r residual histogram1, message=FALSE, warning=FALSE}
+resid_hist <- ggplot(data = lm_fit, aes(x=.resid)) + geom_histogram()
+resid_hist
+```
+#### Residuals qq-plot
+
+Next consider the qq-plot to again judge the normality of the errors. 
+The qq-plot does not look as bad. 
+```{r qq-plot1 of the residuals}
+resid_qqplot <- ggplot(data = lm_fit, aes(sample=.stdresid)) + stat_qq() + geom_abline()
+resid_qqplot
+```
+
+#### Residuals versus Fitted scatterplot
+
+Finally, plot the residuals against the fitted values to see if there is additional structure not captured by the model.
+It looks pretty unstructured - no problems here. 
+
+```{r residuals versus fitted1}
+resid_fitted <- ggplot(data = lm_fit, aes(x=.fitted, y=.resid)) + geom_point() +
+              labs(x="Fitted Values", y="Residuals")
+resid_fitted
+```
+
+### Conclusions from the predictive model
+
+Overweight can be predicted reasonably well from the variables in our dataset. Interestingly Walkable is not statistically significant in the model. We will do some further analysis in the next sections to see if confounders may be impacting this model and there may actually be hidden causality between Walkable and Overweight. 
 
 ## TODO: Insert rest of paper here
 
