@@ -28,7 +28,7 @@ The appendix of this document describes the pre-processing methodology that was 
 
 ## Load necessariy libararies
 
-```{r load libraries, message=FALSE, warning=FALSE}
+```{r load libraries, message=FALSE, warning=FALSE, echo=FALSE,include=FALSE}
 
 rm(list=ls())
 
@@ -186,8 +186,8 @@ Another observation from the summary statistics is that there are a lot of NA va
 summary(dww)
 ```
 Here we take a look at the correlation between the variables. The rendering in markdown is a bit small to see so you can also un-comment the "ggsave" command to export a larger rendering. Key observations:
-1. Walkable (the treatment variable) is correlated with higher levels of alcohol use, smoking, vapeing, and noinsurance. 
-2. Overweight (the dependent variable) is correlated with lower likeiyhood of high school graduation, lower levels of regular dental visits, and higher levels of arthritis, COPD, smoking and vapeing.
+1. Walkable (the treatment variable) is correlated with higher levels of alcohol use, smoking, vaping, and ninsurance. 
+2. Overweight (the dependent variable) is correlated with lower likelihood of high school graduation, lower levels of regular dental visits, and higher levels of arthritis, COPD, smoking and vaping.
 
 ```{r pairs summary of the data, message=FALSE, warning=FALSE}
 dww_numeric = dww %>% select(-YearStart, -LocationAbbr, -LocationDesc, -STATEFP, -COUNTYFP, 
@@ -252,10 +252,217 @@ resid_fitted
 
 Overweight can be predicted reasonably well from the variables in our dataset. Interestingly Walkable is not statistically significant in the model. We will do some further analysis in the next sections to see if confounders may be impacting this model and there may actually be hidden causality between Walkable and Overweight. 
 
-## TODO: Insert rest of paper here
-```{r}
-#poo
+
+## Inverse Probability Weighted Estimate
+```{r message=FALSE,warning=FALSE,echo=FALSE,include=FALSE}
+ipw_df<-dww[,c("R_PCTLOWWAGE","HighSchool","Alcohol","Arthritis","Asthma","KidneyDisease","Vapeing","Smoking","COPD","NoInsurance","Walkable","Overweight")]
+ipw_df$R_PCTLOWWAGE<-ipw_df$R_PCTLOWWAGE*100
+
+
+just_mean_model <- glm(Walkable  ~ 1, ipw_df, family=binomial(link="logit"))
+
+
+full_model <- glm(Walkable~R_PCTLOWWAGE+HighSchool+Alcohol+Arthritis+Asthma+KidneyDisease+Vapeing+Smoking+COPD+NoInsurance, ipw_df, family=binomial(link="logit"))
+
+glm_step1 <- step(full_model, 
+                             scope =list(lower=just_mean_model, upper=full_model),
+                             direction="both")  
 ```
+```{r}
+summary(glm_step1)
+```
+
+
+
+Dentist will be excluded due to its affect on the sample. There are too many missing observations that the models which will nullify many predictions. R_PCTLOWWAGE, KidneyDisease, and NoInsurance were removed from the model.
+```{r, message=FALSE,echo=FALSE,include=FALSE,warning=FALSE}
+
+
+ipw_glm<-glm(Walkable~HighSchool+Alcohol+Arthritis+Asthma+Vapeing+Smoking+COPD,data=ipw_df,family=binomial(link="logit"))
+```
+
+
+Below creates links to the data set with the probabilities of smoking for each observation using the fitted Logit Regression Model.
+```{r,message=FALSE,echo=FALSE,warning=FALSE}
+glm_link_scores<- predict(ipw_glm,ipw_df,type="link")
+glm_response_scores<- predict(ipw_glm,ipw_df,type="response")
+score_data<- data.frame(link=glm_link_scores,
+                        response=glm_response_scores,
+                        y=ipw_df$Walkable,
+                        stringsAsFactors = FALSE)
+```
+### Confusion Matrix
+```{r,echo=FALSE,message=FALSE}
+logit_walk_matrix<- table(ipw_df$Walkable,glm_response_scores>0.3)
+rownames(logit_walk_matrix)<- c("observed 0","observed 1")
+colnames(logit_walk_matrix)<- c("forecasted 0","forecasted 1")
+logit_walk_matrix
+(logit_walk_matrix[1,1]+logit_walk_matrix[2,2])/(logit_walk_matrix[1,1]+logit_walk_matrix[2,2]+logit_walk_matrix[1,2]+logit_walk_matrix[2,1])
+```
+Plot of fitted model with Link and Response scores and ROC.
+```{r,message=FALSE,echo=FALSE,warning=FALSE,fig.show="hold",out.width="50%"}
+par(mar=c(2,1,.1,.1))
+
+score_data %>%
+  ggplot(aes(x=link,y=response,col=factor(y)))+
+  scale_color_manual(values=c("black","red"))+
+  geom_point()+
+  geom_rug()+
+  labs(title="Link and Response scores \n",color="Y Values \n")
+
+plot(roc(ipw_df$Walkable,glm_response_scores,direction="<"),
+     col="blue",lwd=3,main="The ROC Curve")
+```
+
+### Create weighted samples using weighted probabilities
+
+create weighted data series
+```{r}
+weighted_data<- rep(NA,length(ipw_df$Overweight))
+
+for (i in 1:length(weighted_data)){
+  if(ipw_df$Walkable[i]==1){weighted_data[i]=ipw_df$Overweight[i]/glm_response_scores[i]}
+  else
+  {weighted_data[i]=ipw_df$Overweight[i]/(1-glm_response_scores[i])}
+}
+```
+### Causal effects weighted with simple ATE calculation
+```{r}
+causal_effect_weighted1<-na.omit(weighted_data*ipw_df$Walkable)
+causal_effect_weighted2<-na.omit(weighted_data*(1-ipw_df$Walkable))              
+causal_effect_weighted3<-(sum(causal_effect_weighted1)-sum(causal_effect_weighted2))/length(causal_effect_weighted1)
+causal_effect_weighted3
+```
+
+### The simple ATE estimate using linear regression
+```{r message=FALSE,echo=FALSE,warning=FALSE}
+new_x<-(2*ipw_df$Walkable - 1)
+new_df<-as.data.frame(c(weighted_data,new_x))
+
+reg_01<-lm(weighted_data ~  -1+ new_x, data=new_df)
+summary(reg_01)
+```
+
+### Judging errors
+```{r,echo=FALSE,message=FALSE,echo=FALSE,warning=FALSE,fig.show="hold",out.width="33%"}
+par(mar=c(3,1,.1,.1))
+
+res_hist<-ggplot(data=reg_01,aes(x=.resid))+ geom_histogram()
+res_hist
+
+resid_qqp<-ggplot(data=reg_01,aes(sample=.stdresid))+stat_qq()+geom_abline()
+resid_qqp
+
+resid_fit<-ggplot(data=reg_01,aes(x=.fitted,y=.resid))+geom_point()+labs(x="Fitted Values",y="Residuals")
+resid_fit
+```
+Scatter Plot shows no structure, suggesting an accurate model.
+
+
+### Estimate ATE with weights in the LM regression function
+
+```{r include=FALSE}
+weighted_var<-((ipw_df$Walkable/glm_response_scores) + 
+                 ((1-ipw_df$Walkable)/(1-glm_response_scores)))
+ipw_df$wgts<-weighted_var
+
+reg_02<- lm(Overweight~R_PCTLOWWAGE+HighSchool+Alcohol+Arthritis+Asthma+KidneyDisease+Vapeing+Smoking+COPD+NoInsurance+Walkable, data=ipw_df, weights = wgts)%>%
+  step(direction="both")
+```
+```{r}
+summary(reg_02)
+```
+
+Walkable is not significant at the 10% level and below.
+
+```{r ,message=FALSE,echo=FALSE,warning=FALSE,fig.show="hold",out.width="33%"}
+par(mar=c(3,1,.1,.1))
+
+resid_hist<-ggplot(data=reg_02,aes(x=.resid))+geom_histogram()
+resid_hist
+
+qq_resid<-ggplot(data=reg_02,aes(sample=.stdresid))+stat_qq()+geom_abline()
+qq_resid
+
+resid_fitted <- ggplot(data = reg_02, aes(x=.fitted, y=.resid)) + geom_point() +
+              labs(x="Fitted Values", y="Residuals")
+resid_fitted
+```
+Residual histogram and plots show to be normally distributed suggesting an accurate model.
+
+
+
+
+
+
+## Double Robust Estimator
+
+
+```{r,message=FALSE,echo=FALSE,warning=FALSE}
+dr_df<-ipw_df[,c(-13)]
+outcome_reg<-lm(Overweight~Walkable+HighSchool+Arthritis+Asthma+KidneyDisease+Vapeing+Smoking,data=dr_df)%>%
+  step(direction="forward")
+summary(outcome_reg)
+```
+Although there are insignificant variables in the model, the stepwise suggests that this model does hold the lowest AIC. Removing the insignificant variables will only increase the AIC significantly, for this reason, they will be left in.
+
+
+```{r,message=FALSE,echo=FALSE,warning=FALSE,fig.show="hold",out.width="33%"}
+par(mar=c(3,1,.1,.1))
+
+resid_hist<-ggplot(data=outcome_reg,aes(x=.resid))+geom_histogram()
+resid_hist
+
+qq_resid<-ggplot(data=outcome_reg,aes(sample=.stdresid))+stat_qq()+geom_abline()
+qq_resid
+
+resid_fitted <- ggplot(data = outcome_reg, aes(x=.fitted, y=.resid)) + geom_point() +
+              labs(x="Fitted Values", y="Residuals")
+resid_fitted
+```
+
+Residuals are normally distributed and show no patters in scatter plot suggesting a good model.
+
+### Evaluate the Double Robust estimator   
+
+Will calculate terms to evaluate the double-robust estimator, using the same logit model from IPW estimator and its response scores.
+```{r}
+all_treatment_df <- dr_df
+all_treatment_df$Walkable = rep(1,length(all_treatment_df$Overweight))
+
+
+all_treatment_outcome <- predict(outcome_reg, all_treatment_df)
+
+all_control_df <- all_treatment_df
+all_control_df$Walkable = rep(0,length(all_control_df$Overweight))
+
+all_control_outcome <- predict(outcome_reg, all_control_df)
+
+
+Term1 <- na.omit((dr_df$Walkable*dr_df$Overweight)/glm_response_scores)
+
+Term2 <- na.omit((dr_df$Walkable - glm_response_scores )*
+ (all_treatment_outcome)/glm_response_scores)
+
+Term3 <- na.omit(((1 - dr_df$Walkable)*dr_df$Overweight)/
+  (1 -glm_response_scores))
+
+Term4 <- na.omit((dr_df$Walkable - glm_response_scores )*
+ (all_control_outcome)/(1-glm_response_scores))
+
+DR_est <- mean( Term1 - Term2 - Term3 - Term4 )
+
+DR_est
+```
+### Double Robust Conclusion
+
+The Double Robust estimator gives us an estimated causal effect of -0.4628.
+
+
+
+
+## TODO: Insert rest of paper here
+
 
 ## Appendix
 
