@@ -1,0 +1,47 @@
+name: Monitor Goldendale Observatory Availability
+
+on:
+  schedule:
+    - cron: "27 * * * *"
+  workflow_dispatch:
+
+jobs:
+  monitor:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download page
+        run: |
+          curl -L \
+            -A "Mozilla/5.0" \
+            -o page.html \
+            "https://washington-state-parks.trumba.com/goldendale-observatory-state-park/Night-Program/E199051243"
+
+      - name: Check for availability
+        id: check
+        shell: bash
+        run: |
+          if grep -qi "Event is full" page.html; then
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            echo "Still full."
+          else
+            echo "available=true" >> "$GITHUB_OUTPUT"
+            echo "Spot may be available!"
+          fi
+
+      - name: Send email
+        if: steps.check.outputs.available == 'true'
+        uses: dawidd6/action-send-mail@v6
+        with:
+          server_address: ${{ secrets.SMTP_SERVER }}
+          server_port: ${{ secrets.SMTP_PORT }}
+          username: ${{ secrets.SMTP_USERNAME }}
+          password: ${{ secrets.SMTP_PASSWORD }}
+          subject: "🚨 Goldendale Observatory Opening Detected"
+          to: ${{ secrets.ALERT_EMAIL }}
+          from: ${{ secrets.SMTP_USERNAME }}
+          body: |
+            The phrase "Event is full" was NOT found.
+
+            Check the registration page immediately:
+            https://washington-state-parks.trumba.com/goldendale-observatory-state-park/Night-Program/E199051246
