@@ -15,7 +15,7 @@ jobs:
           curl -L \
             -A "Mozilla/5.0" \
             -o page.html \
-            "https://washington-state-parks.trumba.com/goldendale-observatory-state-park/Night-Program/E199051246"
+            "https://washington-state-parks.trumba.com/goldendale-observatory-state-park/Night-Program/E199051243"
 
       - name: Check availability
         id: check
