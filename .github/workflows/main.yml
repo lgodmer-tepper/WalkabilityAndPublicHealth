@@ -38,5 +38,5 @@ jobs:
           curl -X POST "https://api.twilio.com/2010-04-01/Accounts/$SID/Messages.json" \
             --data-urlencode "To=$TO" \
             --data-urlencode "From=$FROM" \
-            --data-urlencode "Body=🚨 Goldendale Observatory may have an opening! Check immediately: https://washington-state-parks.trumba.com/goldendale-observatory-state-park/Night-Program/E199051246" \
+            --data-urlencode "Body=sms_event_notifications" \
             -u "$SID:$TOKEN"
