@@ -16,6 +16,10 @@ jobs:
             -A "Mozilla/5.0" \
             -o page.html \
             "https://washington-state-parks.trumba.com/goldendale-observatory-state-park/Night-Program/E199051243"
+            
+      - name: Print first 200 lines
+        run: |
+          head -200 page.html
 
       - name: Check availability
         id: check
