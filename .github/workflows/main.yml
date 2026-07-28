@@ -2,7 +2,7 @@ name: Monitor Goldendale Observatory Availability
 
 on:
   schedule:
-    - cron: "27 * * * *"
+    - cron: "46 * * * *"
   workflow_dispatch:
 
 jobs:
@@ -15,33 +15,28 @@ jobs:
           curl -L \
             -A "Mozilla/5.0" \
             -o page.html \
-            "https://washington-state-parks.trumba.com/goldendale-observatory-state-park/Night-Program/E199051243"
+            "https://washington-state-parks.trumba.com/goldendale-observatory-state-park/Night-Program/E199051246"
 
-      - name: Check for availability
+      - name: Check availability
         id: check
         shell: bash
         run: |
           if grep -qi "Event is full" page.html; then
             echo "available=false" >> "$GITHUB_OUTPUT"
-            echo "Still full."
           else
             echo "available=true" >> "$GITHUB_OUTPUT"
-            echo "Spot may be available!"
           fi
 
-      - name: Send email
+      - name: Send SMS
         if: steps.check.outputs.available == 'true'
-        uses: dawidd6/action-send-mail@v6
-        with:
-          server_address: ${{ secrets.SMTP_SERVER }}
-          server_port: ${{ secrets.SMTP_PORT }}
-          username: ${{ secrets.SMTP_USERNAME }}
-          password: ${{ secrets.SMTP_PASSWORD }}
-          subject: "🚨 Goldendale Observatory Opening Detected"
-          to: ${{ secrets.ALERT_EMAIL }}
-          from: ${{ secrets.SMTP_USERNAME }}
-          body: |
-            The phrase "Event is full" was NOT found.
-
-            Check the registration page immediately:
-            https://washington-state-parks.trumba.com/goldendale-observatory-state-park/Night-Program/E199051246
+        env:
+          SID: ${{ secrets.TWILIO_ACCOUNT_SID }}
+          TOKEN: ${{ secrets.TWILIO_AUTH_TOKEN }}
+          FROM: ${{ secrets.TWILIO_FROM }}
+          TO: ${{ secrets.TWILIO_TO }}
+        run: |
+          curl -X POST "https://api.twilio.com/2010-04-01/Accounts/$SID/Messages.json" \
+            --data-urlencode "To=$TO" \
+            --data-urlencode "From=$FROM" \
+            --data-urlencode "Body=🚨 Goldendale Observatory may have an opening! Check immediately: https://washington-state-parks.trumba.com/goldendale-observatory-state-park/Night-Program/E199051246" \
+            -u "$SID:$TOKEN"
