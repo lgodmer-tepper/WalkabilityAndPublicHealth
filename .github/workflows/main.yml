@@ -15,7 +15,7 @@ jobs:
           curl -L \
             -A "Mozilla/5.0" \
             -o page.html \
-            "https://www.trumba.com/s.aspx?hosted2=1&editmode&view=event&eventid=199051245&key=&template=&calendar=goldendale-observatory-state-park&widget=main&spudformat=xhr"
+            "https://www.trumba.com/s.aspx?hosted2=1&editmode&view=event&eventid=199051243&key=&template=&calendar=goldendale-observatory-state-park&widget=main&spudformat=xhr"
             
       - name: Print first 200 lines
         run: |
